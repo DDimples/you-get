@@ -21,11 +21,20 @@ from .tudou import tudou_download_by_id
 from .youku import youku_download_by_vid
 
 class Bilibili(VideoExtractor):
+    fake_headers_mobile = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Charset': 'UTF-8,*;q=0.5',
+        'Accept-Encoding': 'gzip,deflate,sdch',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Referer': 'https://www.bilibili.com/',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1',
+        'Cookie': 'buvid3=F601A1A3-F1ED-485A-B552-BFD0DD2554A17479infoc;'
+    }
     name = 'Bilibili'
     live_api = 'http://live.bilibili.com/api/playurl?cid={}&otype=json'
     api_url = 'http://interface.bilibili.com/playurl?'
     bangumi_api_url = 'http://bangumi.bilibili.com/player/web_api/playurl?'
-
+    
     SEC1 = '1c15888dc316e05a15fdd0a02ed6584f'
     SEC2 = '9b288147e5474dd2aa67085f716c560d'
     stream_types = [
@@ -104,8 +113,6 @@ class Bilibili(VideoExtractor):
                 self.parse_bili_xml(api_xml)
 
     def prepare(self, **kwargs):
-        socket.setdefaulttimeout(1) # fail fast, very speedy!
-
         self.ua = fake_headers['User-Agent']
         self.url = url_locations([self.url])[0]
         frag = urllib.parse.urlparse(self.url).fragment
@@ -145,6 +152,16 @@ class Bilibili(VideoExtractor):
         self.download_by_vid(page_list[0]['cid'], True, bangumi_movie=True, **kwargs)
 
     def entry(self, **kwargs):
+        #download by aid
+        aid = re.search(r'av(\d+)', self.url).group(1)
+        api_content = get_content('http://api.bilibili.com/playurl?platform=html5&aid={}'.format(aid), headers=self.fake_headers_mobile)
+        realPlayUrl = re.search(r'"url":"(.*?)"',api_content).group(1)
+        if realPlayUrl is not None:
+            realPlayUrl = realPlayUrl.replace('\\/', '/')
+            self.ext = realPlayUrl.split('.')[-1].split('?')[0]
+            download_urls([realPlayUrl], self.title, self.ext, total_size=None, output_dir=kwargs['output_dir'], merge=kwargs['merge'],headers=self.fake_headers_mobile)
+            self.out = True
+            return
 # tencent player
         tc_flashvars = re.search(r'"bili-cid=\d+&bili-aid=\d+&vid=([^"]+)"', self.page)
         if tc_flashvars:

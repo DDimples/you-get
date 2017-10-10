@@ -101,10 +101,12 @@ SITES = {
     'zhanqi'           : 'zhanqi',
 }
 
+import getopt
 import json
 import locale
 import logging
 import os
+import platform
 import re
 import socket
 import sys
@@ -119,7 +121,8 @@ from .util import log, term
 from .util.git import get_version
 from .util.strings import get_filename, unescape_html
 from . import json_output as json_output_
-
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 dry_run = False
 json_output = False
 force = False
@@ -725,6 +728,7 @@ def get_output_filename(urls, title, ext, output_dir, merge):
     global output_filename
     if output_filename:
         if ext:
+            ext = ext.split('?')[0]
             return output_filename + '.' + ext
         return output_filename
 
